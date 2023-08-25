@@ -87,7 +87,7 @@ const loginUser = async (req, res, next) => {
         //*loging in the user i.e. creating jwt token
         if (match) {
             let digits = '0123456789';
-            OTP = "";
+            let OTP = "";
             for (let i = 0; i < 4; i++) {
                 OTP += digits[Math.floor(Math.random() * 10)];
             }
@@ -100,7 +100,7 @@ const loginUser = async (req, res, next) => {
                 .then(verification => console.log(verification.status));
 
             await User.findOneAndUpdate({ email }, { otp: OTP });
-            res.status(200).json({ otp, email: existingUser.email });
+            res.status(200).json({email: existingUser.email });
         }
         else {
             // res.status(400).send("wrong credentials");
