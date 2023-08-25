@@ -93,14 +93,18 @@ const loginUser = async (req, res, next) => {
             }
 
             await User.findOneAndUpdate({ email }, { otp: OTP });
-
-            await client.verify.v2.services('VA38891662bcc7fc8b9415b98c3302821d')
-                .verifications
-                .create({ code: `OTP for user with email ${email} is ${OTP}`, to: "+"+existingUser.phone, channel: 'sms' })
-                .then(verification => console.log(verification.status));
+            const messageText = `OTP for user with email ${email} is ${OTP}`;
+            client.messages
+                .create({
+                    body: messageText,
+                    from: process.env.twilioPhoneNumber,
+                    to: existingUser.phone
+                })
+                .then(message => console.log(`SMS sent successfully. SID: ${message.sid}`))
+                .catch(error => console.error(`An error occurred: ${error.message}`));
 
             await User.findOneAndUpdate({ email }, { otp: OTP });
-            res.status(200).json({email: existingUser.email });
+            res.status(200).json({ email: existingUser.email });
         }
         else {
             // res.status(400).send("wrong credentials");
