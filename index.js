@@ -3,12 +3,11 @@ const mongoose = require('mongoose');
 const express = require('express');
 const app = express();
 
-const { userRoute } = require('./routes/user');
+const authRoute = require('./routes/user');
 const {notFound,errorHandlerMiddleware}=require("./middleware");
 
 app.use(express.json());
-app.use('/api/userauth', userRoute);
-app.use('/api/bugauth', bugRoute);
+app.use('/api/userauth', authRoute);
 
 app.get("/", (req, res) => {
     res.send("welcome to server");
@@ -16,7 +15,7 @@ app.get("/", (req, res) => {
 
 //connection to database
 mongoose.set("strictQuery", false);
-const url = process.env.MONGO_URL_ADMIN;
+const url = process.env.MONGO_URL;
 mongoose.connect(url,
     {
         useNewUrlParser: true,

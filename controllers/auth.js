@@ -28,10 +28,10 @@ const createUser = async (req, res, next) => {
 
         //* otp
         let digits = '0123456789';
-            OTP="";
-            for(let i=0;i<4;i++){
-                OTP+=digits[Math.floor(Math.random()*10)];
-            }
+        OTP = "";
+        for (let i = 0; i < 4; i++) {
+            OTP += digits[Math.floor(Math.random() * 10)];
+        }
 
         //* saving details in the user model
         const user = new User({
@@ -61,15 +61,79 @@ const getAllUsers = async (req, res, next) => {
     }
 }
 
-const userVerify = async (req, res, next) => {
-    const otp = req.body;
+const loginUser = async (req, res, next) => {
 
-    const token = jwt.sign(
-        { firstname: existingUser.firstname, lastname: existingUser.lastname, id: existingUser._id },
-        process.env.JWT_SECRET,
-        { expiresIn: "3 days" }
-    )
-    res.status(200).send(token);
+    try {
+        const {
+            email,
+            password
+        } = req.body;
+
+        if (!email || !password) {
+            // res.status(400).send("provide all details");
+            throw new BadRequestError('Please provide all the details');
+        }
+
+        //*checking if email exists in db
+        const existingUser = await User.findOne({ email })
+        if (!existingUser) {
+            // res.status(400).send("Invalid Credentials");
+            throw new UnauthenticatedError('Invalid Credentials');
+        }
+
+        //*checking password
+        const match = await bcrypt.compare(password, existingUser.password);
+
+        //*loging in the user i.e. creating jwt token
+        if (match) {
+            let digits = '0123456789';
+            OTP = "";
+            for (let i = 0; i < 4; i++) {
+                OTP += digits[Math.floor(Math.random() * 10)];
+            }
+
+            await User.findOneAndUpdate({ email }, { otp: OTP });
+
+            await client.verify.v2.services('VA38891662bcc7fc8b9415b98c3302821d')
+                .verifications
+                .create({ code: `OTP for user with email ${email} is ${OTP}`, to: "+"+existingUser.phone, channel: 'sms' })
+                .then(verification => console.log(verification.status));
+
+            await User.findOneAndUpdate({ email }, { otp: OTP });
+            res.status(200).json({ otp, email: existingUser.email });
+        }
+        else {
+            // res.status(400).send("wrong credentials");
+            throw new UnauthenticatedError('Invalid Credentials');
+        }
+
+
+    } catch (err) {
+        // res.status(500).send(err);
+        next(err);
+    }
+}
+
+const userVerify = async (req, res, next) => {
+    try {
+        const { otp, email } = req.body;
+
+        const existingUser = await User.findOne({ email });
+        if (otp === existingUser.otp) {
+
+            const token = jwt.sign(
+                { firstname: existingUser.firstname, lastname: existingUser.lastname, id: existingUser._id },
+                process.env.JWT_SECRET,
+                { expiresIn: "3 days" }
+            )
+            res.status(200).send(token);
+        }
+        else {
+            res.status(400).json({ message: "Incorrect otp!" });
+        }
+    } catch (error) {
+        console.error(error);
+    }
 
 }
 
